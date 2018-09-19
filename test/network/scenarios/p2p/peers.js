@@ -78,25 +78,34 @@ module.exports = function(configurations) {
 				let timesNetworkStatusChecked = 0;
 				const checkNetworkStatusInterval = 1000;
 
-				const checkingInterval = setInterval(() => {
-					common.getNodesStatus(params.sockets, (err, data) => {
-						const { networkMaxAvgHeight } = data;
-						timesNetworkStatusChecked += 1;
-						if (err) {
-							clearInterval(checkingInterval);
-							return done(err);
-						}
-						utils.logger.log(
-							`network status: height - ${
-								networkMaxAvgHeight.maxHeight
-							}, average height - ${networkMaxAvgHeight.averageHeight}`
-						);
-						if (timesNetworkStatusChecked === timesToCheckNetworkStatus) {
-							clearInterval(checkingInterval);
-							return done(null, networkMaxAvgHeight);
-						}
-					});
-				}, checkNetworkStatusInterval);
+				const nodeNames = configurations.map((nodeConfig, index) => {
+					return `node_${index}`;
+				});
+
+				common.waitForAllNodesToSync(nodeNames)
+				.then(() => {
+					const checkingInterval = setInterval(() => {
+						common.setMonitoringSocketsConnections(params, configurations);
+						common.getNodesStatus(params.sockets, (err, data) => {
+							const { networkMaxAvgHeight } = data;
+							timesNetworkStatusChecked += 1;
+							if (err) {
+								clearInterval(checkingInterval);
+								return done(err);
+							}
+							utils.logger.log(
+								`network status: height - ${
+									networkMaxAvgHeight.maxHeight
+								}, average height - ${networkMaxAvgHeight.averageHeight}`
+							);
+							if (timesNetworkStatusChecked === timesToCheckNetworkStatus) {
+								clearInterval(checkingInterval);
+								return done(null, networkMaxAvgHeight);
+							}
+						});
+					}, checkNetworkStatusInterval);
+				})
+				.catch(done);
 			});
 
 			describe('network status after 30 seconds', () => {

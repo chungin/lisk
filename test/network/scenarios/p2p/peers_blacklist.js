@@ -83,7 +83,7 @@ module.exports = function(
 					);
 					// Restart the node to load the just changed configuration
 					common
-						.restartNode('node_0')
+						.restartNode('node_0', true)
 						.then(() => {
 							blockchainReady(done, null, null, 'http://127.0.0.1:4000');
 						})
@@ -158,7 +158,7 @@ module.exports = function(
 					);
 					// Restart the node to load the just changed configuration
 					common
-						.restartNode('node_0')
+						.restartNode('node_0', true)
 						.then(() => {
 							blockchainReady(done, null, null, 'http://127.0.0.1:4000');
 						})

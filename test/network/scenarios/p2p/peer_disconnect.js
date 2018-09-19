@@ -86,7 +86,7 @@ module.exports = function(
 			describe('when a stopped node is started', () => {
 				before(done => {
 					common
-						.startNode('node_1')
+						.startNode('node_1', true)
 						.then(done)
 						.catch(done);
 				});
@@ -111,29 +111,25 @@ module.exports = function(
 				});
 			});
 
-			describe('node stop and start', () => {
+			describe('node restart', () => {
 				// To validate peers holding socket connection
 				// Need to keep one peer so that we can validate
 				// Duplicate socket connection exists or not
-				it('stop all the nodes in the network except node_0', () => {
+				before('restart all nodes in the network except node_0', () => {
 					const peersPromises = [];
 					for (let i = 1; i < TOTAL_PEERS; i++) {
-						peersPromises.push(common.stopNode(`node_${i}`));
-					}
-					console.info('Wait for nodes to be stopped');
-					return Promise.all(peersPromises);
-				});
-
-				it('start all nodes that were stopped', () => {
-					const peersPromises = [];
-					for (let i = 1; i < TOTAL_PEERS; i++) {
-						peersPromises.push(common.startNode(`node_${i}`));
+						let nodeName = `node_${i}`;
+						peersPromises.push(
+							common.clearLogs(nodeName).then(() => { // TODO 2 don't clear logs
+								return common.restartNode(nodeName, true);
+							})
+						);
 					}
 					console.info('Wait for nodes to be started');
 					return Promise.all(peersPromises);
 				});
 
-				describe('after all the node restarts', () => {
+				describe('after all the nodes restart', () => {
 					before(done => {
 						network.enableForgingForDelegates(params.configurations, done);
 					});
