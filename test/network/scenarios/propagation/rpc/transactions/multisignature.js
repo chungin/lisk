@@ -26,14 +26,12 @@ const {
 } = require('../../../../../common/helpers/api');
 const confirmTransactionsOnAllNodes = require('../../../../utils/transactions')
 	.confirmTransactionsOnAllNodes;
-const common = require('../../../common');
 
 const constants = __testContext.config.constants;
 
-module.exports = function(configurations) {
+module.exports = function(configurations, network) {
 	describe('@propagation : multisig transactions', () => {
 		const params = {};
-		common.setMonitoringSocketsConnections(params, configurations);
 
 		let transactions = [];
 		const accounts = [];

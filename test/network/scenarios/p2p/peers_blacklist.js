@@ -19,10 +19,10 @@ const Peer = require('../../../../logic/peer');
 const utils = require('../../utils');
 const blockchainReady = require('../../../common/utils/wait_for')
 	.blockchainReady;
-const common = require('../common');
 
 module.exports = function(
 	configurations,
+	network,
 	TOTAL_PEERS,
 	EXPECTED_TOTAL_CONNECTIONS,
 	NUMBER_OF_TRANSACTIONS,
@@ -34,13 +34,11 @@ module.exports = function(
 
 	describe('@network : peer Blacklisted', () => {
 		const params = {};
-		common.setMonitoringSocketsConnections(params, configurations);
-
 		const wsPorts = new Set();
 
 		describe('when peers are mutually connected in the network', () => {
 			before(() => {
-				return common.getAllPeers(params.sockets).then(mutualPeers => {
+				return network.getAllPeers(params.sockets).then(mutualPeers => {
 					mutualPeers.forEach(mutualPeer => {
 						if (mutualPeer) {
 							mutualPeer.peers.map(peer => {
@@ -82,7 +80,7 @@ module.exports = function(
 						JSON.stringify(params.configurations[0], null, 4)
 					);
 					// Restart the node to load the just changed configuration
-					common
+					network
 						.restartNode('node_0', true)
 						.then(() => {
 							blockchainReady(done, null, null, 'http://127.0.0.1:4000');
@@ -116,7 +114,7 @@ module.exports = function(
 
 				it(`peers manager should contain ${TOTAL_PEERS -
 					2} active connections`, () => {
-					return common.getAllPeers(params.sockets).then(mutualPeers => {
+					return network.getAllPeers().then(mutualPeers => {
 						mutualPeers.forEach(mutualPeer => {
 							if (mutualPeer) {
 								expect(mutualPeer.peers.length).to.be.eql(TOTAL_PEERS - 2);
@@ -157,7 +155,7 @@ module.exports = function(
 						JSON.stringify(params.configurations[0], null, 4)
 					);
 					// Restart the node to load the just changed configuration
-					common
+					network
 						.restartNode('node_0', true)
 						.then(() => {
 							blockchainReady(done, null, null, 'http://127.0.0.1:4000');

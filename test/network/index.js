@@ -17,6 +17,9 @@
 const find = require('find');
 const utils = require('./utils');
 const setup = require('./setup');
+const Network = require('./network');
+
+let network;
 
 const TOTAL_PEERS = Number.parseInt(process.env.TOTAL_PEERS) || 10;
 // Full mesh network with 2 connection for bi-directional communication
@@ -34,8 +37,9 @@ describe(`Start a network of ${TOTAL_PEERS} nodes with address "127.0.0.1", WS p
 	const configurations = setup.config.generateLiskConfigs(TOTAL_PEERS);
 	let testFailedError;
 
-	before(done => {
-		setup.createNetwork(configurations, done);
+	before(() => {
+		network = new Network(configurations);
+		return network.createNetwork(configurations);
 	});
 
 	afterEach(function(done) {
@@ -46,10 +50,8 @@ describe(`Start a network of ${TOTAL_PEERS} nodes with address "127.0.0.1", WS p
 		done();
 	});
 
-	after(done => {
-		setup.exit(() => {
-			done(testFailedError);
-		});
+	after(() => {
+		return network.killNetwork();
 	});
 
 	it(`there should be exactly ${TOTAL_PEERS} listening connections for 500[0-9] ports`, done => {
@@ -93,6 +95,7 @@ describe(`Start a network of ${TOTAL_PEERS} nodes with address "127.0.0.1", WS p
 			const test = require(currentFilePath);
 			test(
 				configurations,
+				network,
 				TOTAL_PEERS,
 				EXPECTED_TOTAL_CONNECTIONS,
 				NUMBER_OF_TRANSACTIONS,

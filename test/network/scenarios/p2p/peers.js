@@ -15,17 +15,15 @@
 'use strict';
 
 const utils = require('../../utils');
-const common = require('../common');
 
-module.exports = function(configurations) {
+module.exports = function(configurations, network) {
 	describe('@network : peers', () => {
 		const params = {};
-		common.setMonitoringSocketsConnections(params, configurations);
 
 		describe('mutual connections', () => {
 			let mutualPeers = [];
 			before(() => {
-				return common.getAllPeers(params.sockets).then(peers => {
+				return network.getAllPeers().then(peers => {
 					mutualPeers = peers;
 				});
 			});
@@ -82,27 +80,28 @@ module.exports = function(configurations) {
 					return `node_${index}`;
 				});
 
-				common.waitForAllNodesToSync(nodeNames)
+				network.waitForAllNodesToSync(nodeNames)
 				.then(() => {
 					const checkingInterval = setInterval(() => {
-						common.setMonitoringSocketsConnections(params, configurations);
-						common.getNodesStatus(params.sockets, (err, data) => {
-							const { networkMaxAvgHeight } = data;
-							timesNetworkStatusChecked += 1;
-							if (err) {
+						// network.setMonitoringSocketsConnections(params, configurations); // TODO 2
+						network.getNodesStatus()
+							.then(data => {
+								const { networkMaxAvgHeight } = data;
+								timesNetworkStatusChecked += 1;
+								utils.logger.log(
+									`network status: height - ${
+										networkMaxAvgHeight.maxHeight
+									}, average height - ${networkMaxAvgHeight.averageHeight}`
+								);
+								if (timesNetworkStatusChecked === timesToCheckNetworkStatus) {
+									clearInterval(checkingInterval);
+									return done(null, networkMaxAvgHeight);
+								}
+							})
+							.catch(err => {
 								clearInterval(checkingInterval);
-								return done(err);
-							}
-							utils.logger.log(
-								`network status: height - ${
-									networkMaxAvgHeight.maxHeight
-								}, average height - ${networkMaxAvgHeight.averageHeight}`
-							);
-							if (timesNetworkStatusChecked === timesToCheckNetworkStatus) {
-								clearInterval(checkingInterval);
-								return done(null, networkMaxAvgHeight);
-							}
-						});
+								done(err);
+							});
 					}, checkNetworkStatusInterval);
 				})
 				.catch(done);
@@ -116,14 +115,18 @@ module.exports = function(configurations) {
 				let peerStatusList;
 
 				before(done => {
-					common.getNodesStatus(params.sockets, (err, data) => {
-						getNodesStatusError = err;
-						peersCount = data.peersCount;
-						peerStatusList = data.peerStatusList;
-						networkHeight = data.networkMaxAvgHeight.maxHeight;
-						networkAverageHeight = data.networkMaxAvgHeight.averageHeight;
-						done();
-					});
+					network.getNodesStatus()
+						.then(data => {
+							peersCount = data.peersCount;
+							peerStatusList = data.peerStatusList;
+							networkHeight = data.networkMaxAvgHeight.maxHeight;
+							networkAverageHeight = data.networkMaxAvgHeight.averageHeight;
+							done();
+						})
+						.catch(err => {
+							getNodesStatusError = err;
+							done();
+						});
 				});
 
 				it('should have no error', () => {
@@ -139,7 +142,7 @@ module.exports = function(configurations) {
 				});
 
 				it('should have valid values values matching specification', () => {
-					return common.getAllPeers(params.sockets).then(results => {
+					return network.getAllPeers().then(results => {
 						return results.map(peersList => {
 							return peersList.peers.map(peer => {
 								expect(peer.ip).to.not.empty;
@@ -153,7 +156,7 @@ module.exports = function(configurations) {
 				});
 
 				it('should have different peers heights propagated correctly on peers lists', () => {
-					return common.getAllPeers(params.sockets).then(results => {
+					return network.getAllPeers().then(results => {
 						expect(
 							results.some(peersList => {
 								return peersList.peers.some(peer => {

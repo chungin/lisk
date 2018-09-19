@@ -17,10 +17,10 @@
 const Peer = require('../../../../logic/peer');
 const utils = require('../../utils');
 const network = require('../../setup/network');
-const common = require('../common');
 
 module.exports = function(
 	configurations,
+	network,
 	TOTAL_PEERS,
 	EXPECTED_TOTAL_CONNECTIONS,
 	NUMBER_OF_TRANSACTIONS,
@@ -32,13 +32,11 @@ module.exports = function(
 
 	describe('@network : peer Disconnect', () => {
 		const params = {};
-		common.setMonitoringSocketsConnections(params, configurations);
-
 		const wsPorts = new Set();
 
 		describe('when peers are mutually connected in the network', () => {
 			before(() => {
-				return common.getAllPeers(params.sockets).then(mutualPeers => {
+				return network.getAllPeers().then(mutualPeers => {
 					mutualPeers.forEach(mutualPeer => {
 						if (mutualPeer) {
 							mutualPeer.peers.map(peer => {
@@ -54,7 +52,7 @@ module.exports = function(
 
 			describe('when a node is stopped', () => {
 				before(done => {
-					common
+					network
 						.stopNode('node_1')
 						.then(done)
 						.catch(done);
@@ -85,7 +83,7 @@ module.exports = function(
 
 			describe('when a stopped node is started', () => {
 				before(done => {
-					common
+					network
 						.startNode('node_1', true)
 						.then(done)
 						.catch(done);
@@ -120,8 +118,8 @@ module.exports = function(
 					for (let i = 1; i < TOTAL_PEERS; i++) {
 						let nodeName = `node_${i}`;
 						peersPromises.push(
-							common.clearLogs(nodeName).then(() => { // TODO 2 don't clear logs
-								return common.restartNode(nodeName, true);
+							network.clearLogs(nodeName).then(() => { // TODO 2 don't clear logs, check ready via HTTP or WS
+								return network.restartNode(nodeName, true);
 							})
 						);
 					}

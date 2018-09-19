@@ -15,7 +15,8 @@
 'use strict';
 
 const childProcess = require('child_process');
-const utils = require('../utils');
+const utils = require('./utils');
+const shell = require('./setup/shell');
 
 const NODE_FINISHED_SYNC_REGEX = /Finished sync/;
 const NODE_FINISHED_SYNC_TIMEOUT = 40000;
@@ -50,9 +51,10 @@ const getMaxAndAvgHeight = peerStatusList => {
 class Network {
 	constructor(configurations) {
 		this.configurations = configurations;
+		this.sockets = [];
 	}
 
-	establishMonitoringSocketsConnections(params) {
+	establishMonitoringSocketsConnections() {
 		return new Promise((resolve, reject) => {
 			utils.ws.establishWSConnectionsToNodes(
 				this.configurations,
@@ -60,17 +62,16 @@ class Network {
 					if (err) {
 						return reject(err);
 					}
-					params.sockets = socketsResult;
-					params.configurations = this.configurations;
-					resolve();
+					this.sockets = socketsResult;
+					resolve(socketsResult);
 				}
 			);
 		});
 	}
 
-	killMonitoringSocketsConnections(params) {
+	killMonitoringSocketsConnections() {
 		return new Promise((resolve, reject) => {
-			utils.ws.killMonitoringSockets(params.sockets, err => {
+			utils.ws.killMonitoringSockets(this.sockets, err => {
 				if (err) {
 					return reject(err);
 				}
@@ -99,6 +100,9 @@ class Network {
 			})
 			.then(() => {
 				return this.enableForgingForDelegates(configurations);
+			})
+			.then(() => {
+				return this.establishMonitoringSocketsConnections();
 			})
 			.then(() => {
 				return new Promise((resolve, reject) => {
@@ -165,6 +169,24 @@ class Network {
 		});
 	}
 
+	killNetwork() {
+		return Promise.resolve()
+			.then(() => {
+				return new Promise((resolve, reject) => {
+					utils.logger.log('Shutting down network');
+					shell.killTestNodes(err => {
+						if (err) {
+							return reject(err);
+						}
+						resolve();
+					});
+				});
+			})
+			.then(() => {
+				return this.killMonitoringSocketsConnections();
+			});
+	}
+
 	waitForAllNodesToBeReady(configurations) {
 		utils.logger.log('Waiting for nodes to load the blockchain');
 
@@ -216,9 +238,10 @@ class Network {
 			});
 	}
 
-	getAllPeers(sockets) {
+ 	// TODO 2: Find a way to not have to pass sockets as argument
+	getAllPeers() {
 		return Promise.all(
-			sockets.map(socket => {
+			this.sockets.map(socket => {
 				if (socket.state === 'open') {
 					return socket.call('list', {});
 				}
@@ -332,26 +355,20 @@ class Network {
 		return Promise.all(waitForRestartPromises);
 	}
 
-	getNodesStatus(sockets, cb) {
-		this.getAllPeers(sockets)
+	getNodesStatus() {
+		return this.getAllPeers(this.sockets)
 			.then(peers => {
-				const peersCount = peers.length;
-				getPeersStatus(peers)
-					.then(peerStatusList => {
-						const networkMaxAvgHeight = getMaxAndAvgHeight(peerStatusList);
-						const status = {
-							peersCount,
-							peerStatusList,
-							networkMaxAvgHeight,
-						};
-						cb(null, status);
-					})
-					.catch(err => {
-						cb(err, null);
-					});
+				return getPeersStatus(peers);
 			})
-			.catch(err => {
-				cb(err, null);
+			.then(peerStatusList => {
+				const peersCount = peerStatusList.length;
+				const networkMaxAvgHeight = getMaxAndAvgHeight(peerStatusList);
+				const status = {
+					peersCount,
+					peerStatusList,
+					networkMaxAvgHeight,
+				};
+				return status;
 			});
 	}
 }
@@ -360,4 +377,4 @@ process.on('unhandledRejection', (err) => {
   console.error('----UNHANDLED-REJECTION-----', err); // TODO 2
 });
 
-module.exports = Common;
+module.exports = Network;

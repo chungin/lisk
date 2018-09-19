@@ -15,12 +15,10 @@
 'use strict';
 
 const Promise = require('bluebird');
-const common = require('../common');
 
-module.exports = function(configurations) {
+module.exports = function(configurations, network) {
 	describe('@propagation : transactions', () => {
 		const params = {};
-		common.setMonitoringSocketsConnections(params, configurations);
 
 		let nodesTransactions = [];
 
