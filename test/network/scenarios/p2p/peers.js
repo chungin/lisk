@@ -22,10 +22,15 @@ module.exports = function(configurations, network) {
 
 		describe('mutual connections', () => {
 			let mutualPeers = [];
-			before(() => {
-				return network.getAllPeers().then(peers => {
-					mutualPeers = peers;
+			before((done) => {
+				network.getAllPeersLists().then((peers) => {
+					// mutualPeers = peers;
+					console.log('TODO 2222', peers);
 				});
+				// return network.getAllPeersLists().then(peers => {
+				// 	mutualPeers = peers;
+				// });
+
 			});
 
 			it('should return a list of peers mutually interconnected', () => {
@@ -142,7 +147,7 @@ module.exports = function(configurations, network) {
 				});
 
 				it('should have valid values values matching specification', () => {
-					return network.getAllPeers().then(results => {
+					return network.getAllPeersLists().then(results => {
 						return results.map(peersList => {
 							return peersList.peers.map(peer => {
 								expect(peer.ip).to.not.empty;
@@ -156,7 +161,7 @@ module.exports = function(configurations, network) {
 				});
 
 				it('should have different peers heights propagated correctly on peers lists', () => {
-					return network.getAllPeers().then(results => {
+					return network.getAllPeersLists().then(results => {
 						expect(
 							results.some(peersList => {
 								return peersList.peers.some(peer => {

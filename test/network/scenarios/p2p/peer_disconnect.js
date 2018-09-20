@@ -36,7 +36,7 @@ module.exports = function(
 
 		describe('when peers are mutually connected in the network', () => {
 			before(() => {
-				return network.getAllPeers().then(mutualPeers => {
+				return network.getAllPeersLists().then(mutualPeers => {
 					mutualPeers.forEach(mutualPeer => {
 						if (mutualPeer) {
 							mutualPeer.peers.map(peer => {

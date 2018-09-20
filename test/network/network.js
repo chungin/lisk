@@ -241,15 +241,38 @@ class Network {
 			});
 	}
 
- 	// TODO 2: Find a way to not have to pass sockets as argument
+  getAllPeersLists() {
+    return Promise.all(
+      this.sockets.map(socket => {
+        if (socket.state === 'open') {
+          return socket.call('list', {});
+        }
+        return null;
+      })
+      .filter(result => {
+        return result !== null;
+      })
+    ).then(result => {
+			console.log('PEERSLIST', result); // TODO 2
+			return result;
+		});
+	}
+
 	getAllPeers() {
-		return Promise.all(
-			this.sockets.map(socket => {
-				if (socket.state === 'open') {
-					return socket.call('list', {});
+		return this.getAllPeersLists()
+		.then(peerListResults => {
+			const peersMap = {};
+			peerListResults.forEach(result => {
+				if (result.peers) {
+					result.peers.forEach(peer => {
+						peersMap[`${peer.ip}:${peer.wsPort}`] = peer;
+					});
 				}
-			})
-		);
+			});
+			return Object.keys(peersMap).map(peerString => {
+				return peersMap[peerString];
+			});
+		});
 	}
 
 	waitForNodeToSync(nodeName) {
@@ -359,7 +382,7 @@ class Network {
 	}
 
 	getNodesStatus() {
-		return this.getAllPeers(this.sockets)
+		return this.getAllPeers()
 			.then(peers => {
 				return getPeersStatus(peers);
 			})

@@ -38,7 +38,7 @@ module.exports = function(
 
 		describe('when peers are mutually connected in the network', () => {
 			before(() => {
-				return network.getAllPeers().then(mutualPeers => {
+				return network.getAllPeersLists().then(mutualPeers => {
 					mutualPeers.forEach(mutualPeer => {
 						if (mutualPeer) {
 							mutualPeer.peers.map(peer => {
@@ -114,7 +114,7 @@ module.exports = function(
 
 				it(`peers manager should contain ${TOTAL_PEERS -
 					2} active connections`, () => {
-					return network.getAllPeers().then(mutualPeers => {
+					return network.getAllPeersLists().then(mutualPeers => {
 						mutualPeers.forEach(mutualPeer => {
 							if (mutualPeer) {
 								expect(mutualPeer.peers.length).to.be.eql(TOTAL_PEERS - 2);
