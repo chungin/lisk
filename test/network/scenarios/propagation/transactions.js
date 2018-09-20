@@ -24,7 +24,7 @@ module.exports = function(configurations, network) {
 
 		before(() => {
 			return Promise.all(
-				params.sockets.map(socket => {
+				network.sockets.map(socket => {
 					return socket.call('blocks');
 				})
 			).then(results => {
@@ -32,7 +32,7 @@ module.exports = function(configurations, network) {
 					return res.blocks;
 				});
 				expect(nodesTransactions).to.have.lengthOf(
-					params.configurations.length
+					configurations.length
 				);
 			});
 		});

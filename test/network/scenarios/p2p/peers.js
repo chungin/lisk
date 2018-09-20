@@ -37,7 +37,7 @@ module.exports = function(configurations, network) {
 					const peerPorts = mutualPeer.peers.map(peer => {
 						return peer.wsPort;
 					});
-					const allPorts = params.configurations.map(configuration => {
+					const allPorts = configurations.map(configuration => {
 						return configuration.wsPort;
 					});
 					expect(_.intersection(allPorts, peerPorts)).to.be.an('array').and.not

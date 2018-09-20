@@ -38,7 +38,7 @@ module.exports = function(
 
 		describe('when peers are mutually connected in the network', () => {
 			before(() => {
-				return network.getAllPeers(params.sockets).then(mutualPeers => {
+				return network.getAllPeers().then(mutualPeers => {
 					mutualPeers.forEach(mutualPeer => {
 						if (mutualPeer) {
 							mutualPeer.peers.map(peer => {
@@ -74,10 +74,10 @@ module.exports = function(
 
 			describe('when a node blacklists an ip', () => {
 				before(done => {
-					params.configurations[0].peers.access.blackList.push('127.0.0.1');
+					configurations[0].peers.access.blackList.push('127.0.0.1');
 					fs.writeFileSync(
 						`${__dirname}/../../configs/config.node-0.json`,
-						JSON.stringify(params.configurations[0], null, 4)
+						JSON.stringify(configurations[0], null, 4)
 					);
 					// Restart the node to load the just changed configuration
 					network
@@ -149,10 +149,10 @@ module.exports = function(
 
 			describe('when a node remove the just blacklisted ip', () => {
 				before(done => {
-					params.configurations[0].peers.access.blackList = [];
+					configurations[0].peers.access.blackList = [];
 					fs.writeFileSync(
 						`${__dirname}/../../configs/config.node-0.json`,
-						JSON.stringify(params.configurations[0], null, 4)
+						JSON.stringify(configurations[0], null, 4)
 					);
 					// Restart the node to load the just changed configuration
 					network

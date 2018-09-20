@@ -16,7 +16,6 @@
 
 const fs = require('fs');
 const utils = require('../utils');
-const network = require('./network');
 
 const SYNC_MODES = {
 	RANDOM: 0,

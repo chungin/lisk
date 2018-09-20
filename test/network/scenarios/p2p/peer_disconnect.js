@@ -16,7 +16,6 @@
 
 const Peer = require('../../../../logic/peer');
 const utils = require('../../utils');
-const network = require('../../setup/network');
 
 module.exports = function(
 	configurations,
@@ -29,6 +28,7 @@ module.exports = function(
 	const TOTAL_PEERS_LESS_ONE = TOTAL_PEERS - 1;
 	const EXPECTED_TOTAL_CONNECTIONS_AFTER_REMOVING_PEER =
 		(TOTAL_PEERS_LESS_ONE - 1) * TOTAL_PEERS_LESS_ONE * 2;
+
 
 	describe('@network : peer Disconnect', () => {
 		const params = {};
@@ -128,9 +128,9 @@ module.exports = function(
 				});
 
 				describe('after all the nodes restart', () => {
-					before(done => {
-						network.enableForgingForDelegates(params.configurations, done);
-					});
+					// before(done => { // TODO 2
+					// 	network.enableForgingForDelegates(configurations, done);
+					// });
 
 					// The expected connection becomes EXPECTED_TOTAL_CONNECTIONS + 18 previously held connections
 					it(`there should be ${EXPECTED_TOTAL_CONNECTIONS +

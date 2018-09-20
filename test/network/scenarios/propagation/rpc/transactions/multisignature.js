@@ -42,7 +42,7 @@ module.exports = function(configurations, network) {
 				signatures: [signature],
 			};
 			return Promise.all(
-				params.sockets.map(socket => {
+				network.sockets.map(socket => {
 					return socket.emit('postSignatures', postSignatures);
 				})
 			);

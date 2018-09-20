@@ -17,6 +17,9 @@
 const childProcess = require('child_process');
 const utils = require('./utils');
 const shell = require('./setup/shell');
+const config = require('./setup/config');
+const waitUntilBlockchainReady = require('../common/utils/wait_for')
+	.blockchainReady;
 
 const NODE_FINISHED_SYNC_REGEX = /Finished sync/;
 const NODE_FINISHED_SYNC_TIMEOUT = 40000;
@@ -96,10 +99,10 @@ class Network {
 				return this.launchTestNodes();
 			})
 			.then(() => {
-				return this.waitForAllNodesToBeReady(configurations);
+				return this.waitForAllNodesToBeReady();
 			})
 			.then(() => {
-				return this.enableForgingForDelegates(configurations);
+				return this.enableForgingForDelegates();
 			})
 			.then(() => {
 				return this.establishMonitoringSocketsConnections();
@@ -187,13 +190,13 @@ class Network {
 			});
 	}
 
-	waitForAllNodesToBeReady(configurations) {
+	waitForAllNodesToBeReady() {
 		utils.logger.log('Waiting for nodes to load the blockchain');
 
 		const retries = 20;
 		const timeout = 3000;
 
-		const nodeReadyPromises = configurations.map((configuration) => {
+		const nodeReadyPromises = this.configurations.map((configuration) => {
 			return new Promise((resolve, reject) => {
 				waitUntilBlockchainReady( // TODO 2: Require; see other network.js
 					(err) => {
@@ -212,11 +215,11 @@ class Network {
 		return Promise.all(nodeReadyPromises);
 	}
 
-	enableForgingForDelegates(configurations) {
+	enableForgingForDelegates() {
 		utils.logger.log('Enabling forging with registered delegates');
 
 		const enableForgingPromises = [];
-		configurations.forEach(configuration => {
+		this.configurations.forEach(configuration => {
 			configuration.forging.delegates.map(keys => {
 				if (!configuration.forging.force) {
 					const enableForgingPromise = utils.http.enableForging(
@@ -372,9 +375,5 @@ class Network {
 			});
 	}
 }
-
-process.on('unhandledRejection', (err) => {
-  console.error('----UNHANDLED-REJECTION-----', err); // TODO 2
-});
 
 module.exports = Network;
