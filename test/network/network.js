@@ -67,7 +67,7 @@ class Network {
 						return reject(
 							new Error(
 								`Failed to establish monitoring connections due to error: ${
-									err.message
+									err.message || err
 								}`
 							)
 						);
@@ -141,7 +141,11 @@ class Network {
 			utils.logger.log('Generating PM2 configuration');
 			config.generatePM2Configs(this.configurations, (err, pm2Configs) => {
 				if (err) {
-					return reject(err);
+					return reject(
+						new Error(`Failed to generate PM2 configs due to error: ${
+							err.message || err
+						}`)
+					);
 				}
 				resolve(pm2Configs);
 			});
@@ -154,8 +158,8 @@ class Network {
 			shell.recreateDatabases(this.configurations, err => {
 				if (err) {
 					return reject(
-						new Error(`Failed to recreate databases due to error ${
-							err.message
+						new Error(`Failed to recreate databases due to error: ${
+							err.message || err
 						}`)
 					);
 				}
@@ -170,8 +174,8 @@ class Network {
 			shell.clearLogs(err => {
 				if (err) {
 					return reject(
-						new Error(`Failed to clear all logs due to error ${
-							err.message
+						new Error(`Failed to clear all logs due to error: ${
+							err.message || err
 						}`)
 					);
 				}
@@ -187,7 +191,7 @@ class Network {
 				if (err) {
 					return reject(
 						new Error(`Failed to launch nest nodes due to error: ${
-							err.message
+							err.message || err
 						}`)
 					);
 				}
@@ -229,8 +233,8 @@ class Network {
 				(err) => {
 					if (err) {
 						return reject(
-							new Error(`Failed to wait for node to be ready due to error ${
-								err.message
+							new Error(`Failed to wait for node to be ready due to error: ${
+								err.message || err
 							}`)
 						);
 					}
@@ -302,9 +306,9 @@ class Network {
 				}
 			})
 			.catch(err => {
-				// Rethrow error as higher level error.
+				// Catch and rethrow promise error as higher level error.
 				throw new Error(`Failed to enable forging for delegates due to error: ${
-					err.message
+					err.message || err
 				}`);
 			});
 	}
@@ -361,7 +365,9 @@ class Network {
 			pm2LogProcess.once('error', err => {
 				clearTimeout(nodeReadyTimeout);
 				pm2LogProcess.stdout.removeAllListeners('data');
-				reject(new Error(`Node ${nodeName} failed to sync: ${err.message}`));
+				reject(new Error(`Node ${nodeName} failed to sync: ${
+					err.message || err
+				}`));
 			});
 			pm2LogProcess.stdout.on('data', data => {
 				const dataString = data.toString();
@@ -394,7 +400,9 @@ class Network {
 			childProcess.exec(`rm -rf test/network/logs/lisk-test-${sanitizedNodeName}.*`, err => {
 				if (err) {
 					return reject(
-						new Error(`Failed to clear logs for node ${nodeName}: ${err.message}`)
+						new Error(`Failed to clear logs for node ${nodeName}: ${
+							err.message || err
+						}`)
 					);
 				}
 				resolve();
@@ -407,7 +415,9 @@ class Network {
 			childProcess.exec(`node_modules/.bin/pm2 stop ${nodeName}`, err => {
 				if (err) {
 					return reject(
-						new Error(`Failed to stop node ${nodeName}: ${err.message}`)
+						new Error(`Failed to stop node ${nodeName}: ${
+							err.message || err
+						}`)
 					);
 				}
 				resolve();
@@ -420,7 +430,9 @@ class Network {
 			childProcess.exec(`node_modules/.bin/pm2 start ${nodeName}`, err => {
 				if (err) {
 					return reject(
-						new Error(`Failed to start node ${nodeName}: ${err.message}`)
+						new Error(`Failed to start node ${nodeName}: ${
+							err.message || err
+						}`)
 					);
 				}
 				resolve();
