@@ -112,7 +112,7 @@ class Network {
 				return this.launchTestNodes();
 			})
 			.then(() => {
-				return this.waitForAllNodesToBeReady();
+				return this.waitForAllNodesToBeReady(true);
 			})
 			.then(() => {
 				return this.enableForgingForDelegates();
@@ -218,7 +218,7 @@ class Network {
 			});
 	}
 
-	waitForNodeToBeReady(nodeName) {
+	waitForNodeToBeReady(nodeName, logRetries) {
 		const retries = 20;
 		const timeout = 3000;
 		const pm2Config = this.pm2ConfigMap[nodeName];
@@ -245,19 +245,20 @@ class Network {
 				},
 				retries,
 				timeout,
-				`http://${configuration.ip}:${configuration.httpPort}`
+				`http://${configuration.ip}:${configuration.httpPort}`,
+				logRetries
 			);
 		});
 	}
 
-	waitForAllNodesToBeReady() {
+	waitForAllNodesToBeReady(logRetries) {
 		utils.logger.log('Waiting for nodes to load the blockchain');
 
 		const retries = 20;
 		const timeout = 3000;
 
 		const nodeReadyPromises = Object.keys(this.pm2ConfigMap).map(nodeName => {
-			return this.waitForNodeToBeReady(nodeName);
+			return this.waitForNodeToBeReady(nodeName, logRetries);
 		});
 
 		// return Promise.all(nodeReadyPromises); // TODO 2 this is correct, next line is wrong

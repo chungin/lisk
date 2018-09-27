@@ -26,7 +26,7 @@ var apiHelpers = require('../helpers/api');
  * @param {number} [timeout=200] timeout
  * @param {string} [baseUrl='http://localhost:5000'] timeout
  */
-function blockchainReady(cb, retries, timeout, baseUrl) {
+function blockchainReady(cb, retries, timeout, baseUrl, logRetries) {
 	if (!retries) {
 		retries = 10;
 	}
@@ -46,11 +46,13 @@ function blockchainReady(cb, retries, timeout, baseUrl) {
 				retries -= 1;
 				res = JSON.parse(res.body);
 				if (!res.data.loaded && retries >= 0) {
-					__testContext.debug(
-						`Retrying ${totalRetries -
-							retries} time loading blockchain in next ${timeout /
-							1000.0} seconds...`
-					);
+					if (logRetries) {
+						__testContext.debug(
+							`Retrying ${totalRetries -
+								retries} time loading blockchain in next ${timeout /
+									1000.0} seconds...`
+								);
+					}
 					return setTimeout(() => {
 						fetchBlockchainStatus();
 					}, timeout);
@@ -62,11 +64,13 @@ function blockchainReady(cb, retries, timeout, baseUrl) {
 			.catch(() => {
 				retries -= 1;
 				if (retries >= 0) {
-					__testContext.debug(
-						`Retrying ${totalRetries -
-							retries} time loading blockchain in next ${timeout /
-							1000.0} seconds...`
-					);
+					if (logRetries) {
+						__testContext.debug(
+							`Retrying ${totalRetries -
+								retries} time loading blockchain in next ${timeout /
+								1000.0} seconds...`
+						);
+					}
 					return setTimeout(() => {
 						fetchBlockchainStatus();
 					}, timeout);
