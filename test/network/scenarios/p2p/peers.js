@@ -22,15 +22,10 @@ module.exports = function(configurations, network) {
 
 		describe('mutual connections', () => {
 			let mutualPeers = [];
-			before((done) => {
-				network.getAllPeersLists().then((peers) => {
-					// mutualPeers = peers;
-					console.log('TODO 2222', peers);
+			before(() => {
+				return network.getAllPeersLists().then((peers) => {
+					mutualPeers = peers;
 				});
-				// return network.getAllPeersLists().then(peers => {
-				// 	mutualPeers = peers;
-				// });
-
 			});
 
 			it('should return a list of peers mutually interconnected', () => {
@@ -85,10 +80,10 @@ module.exports = function(configurations, network) {
 					return `node_${index}`;
 				});
 
-				network.waitForAllNodesToSync(nodeNames)
+				network.waitForNodesToBeReady(nodeNames)
 				.then(() => {
 					const checkingInterval = setInterval(() => {
-						// network.setMonitoringSocketsConnections(params, configurations); // TODO 2
+						// network.setMonitoringSocketsConnections(params, configurations); // TODO 2 delete
 						network.getNodesStatus()
 							.then(data => {
 								const { networkMaxAvgHeight } = data;

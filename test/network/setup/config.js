@@ -76,43 +76,56 @@ const config = {
 
 		return configurations;
 	},
-	generatePM2json(configurations, cb) {
-		const pm2Config = configurations.reduce(
-			(pm2Config, configuration) => {
-				const index = pm2Config.apps.length;
-				configuration.db.database = `${configuration.db.database}_${index}`;
-				try {
-					fs.writeFileSync(
-						`${__dirname}/../configs/config.node-${index}.json`,
-						JSON.stringify(configuration, null, 4)
-					);
-				} catch (ex) {
-					return cb(ex);
-				}
-				pm2Config.apps.push({
-					exec_mode: 'fork',
-					script: 'app.js',
-					name: `node_${index}`,
-					args: ` -c ./test/network/configs/config.node-${index}.json`,
-					env: {
-						NODE_ENV: 'test',
-					},
-					error_file: `./test/network/logs/lisk-test-node-${index}.err.log`,
-					out_file: `./test/network/logs/lisk-test-node-${index}.out.log`,
-				});
-				return pm2Config;
-			},
-			{ apps: [] }
-		);
+	generatePM2Configs(configurations, callback) {
+		const configReducer = (pm2Config, configuration) => {
+			const index = pm2Config.apps.length;
+			configuration.db.database = `${configuration.db.database}_${index}`;
+			try {
+				fs.writeFileSync(
+					`${__dirname}/../configs/config.node-${index}.json`,
+					JSON.stringify(configuration, null, 4)
+				);
+			} catch (ex) {
+				throw new Error(`Failed to write PM2 config for node ${
+					index
+				} to file system because of exception: ${ex.message}`);
+			}
+			pm2Config.apps.push({
+				exec_mode: 'fork',
+				script: 'app.js',
+				name: `node_${index}`,
+				args: ` -c ./test/network/configs/config.node-${index}.json`,
+				env: {
+					NODE_ENV: 'test',
+				},
+				error_file: `./test/network/logs/lisk-test-node-${index}.err.log`,
+				out_file: `./test/network/logs/lisk-test-node-${index}.out.log`,
+				configuration
+			});
+			return pm2Config;
+		};
+
+		let combinedPM2Config = null;
+		try {
+			combinedPM2Config = configurations.reduce(
+				configReducer,
+				{ apps: [] }
+			);
+		} catch (ex) {
+			return callback(ex);
+		}
 		try {
 			fs.writeFileSync(
 				`${__dirname}/../pm2.network.json`,
-				JSON.stringify(pm2Config, null, 4)
+				JSON.stringify(combinedPM2Config, null, 4)
 			);
 		} catch (ex) {
-			return cb(ex);
+			return callback(
+				new Error(`Failed to write pm2.network.json to file system
+					because of exception: ${ex.message}`)
+			);
 		}
-		return cb();
+		return callback(null, combinedPM2Config);
 	},
 	generatePeers(configurations, syncMode, syncModeArgs, currentPeer) {
 		syncModeArgs = syncModeArgs || SYNC_MODE_DEFAULT_ARGS[syncMode];

@@ -55,6 +55,7 @@ class Network {
 	constructor(configurations) {
 		this.configurations = configurations;
 		this.sockets = [];
+		this.pm2ConfigMap = {};
 	}
 
 	establishMonitoringSocketsConnections() {
@@ -87,7 +88,13 @@ class Network {
 	createNetwork() {
 		return Promise.resolve()
 			.then(() => {
-				return this.generatePM2JSON();
+				return this.generatePM2Configs()
+				.then(pm2Configs => {
+					this.pm2ConfigMap = {};
+					pm2Configs.apps.forEach(pm2Config => {
+						this.pm2ConfigMap[pm2Config.name] = pm2Config;
+					});
+				});
 			})
 			.then(() => {
 				return this.recreateDatabases();
@@ -123,14 +130,14 @@ class Network {
 			});
 	}
 
-	generatePM2JSON() {
+	generatePM2Configs() {
 		return new Promise((resolve, reject) => {
 			utils.logger.log('Generating PM2 configuration');
-			config.generatePM2json(this.configurations, (err, pm2JSON) => {
+			config.generatePM2Configs(this.configurations, (err, pm2Configs) => {
 				if (err) {
 					return reject(err);
 				}
-				resolve(pm2JSON);
+				resolve(pm2Configs);
 			});
 		});
 	}
@@ -190,26 +197,53 @@ class Network {
 			});
 	}
 
+	waitForNodeToBeReady(nodeName) {
+		const retries = 20;
+		const timeout = 3000;
+		const configuration = this.pm2ConfigMap[nodeName];
+		if (!configuration) {
+			return Promise.reject(
+				new Error(`Could not find pm2Config for ${nodeName}`)
+			);
+		}
+
+		return new Promise((resolve, reject) => {
+			waitUntilBlockchainReady(
+				(err) => {
+					if (err) {
+						return reject(err);
+					}
+					resolve();
+				},
+				retries,
+				timeout,
+				`http://${configuration.ip}:${configuration.httpPort}`
+			);
+		});
+	}
+
 	waitForAllNodesToBeReady() {
 		utils.logger.log('Waiting for nodes to load the blockchain');
 
 		const retries = 20;
 		const timeout = 3000;
 
-		const nodeReadyPromises = this.configurations.map((configuration) => {
-			return new Promise((resolve, reject) => {
-				waitUntilBlockchainReady( // TODO 2: Require; see other network.js
-					(err) => {
-						if (err) {
-							return reject(err);
-						}
-						resolve();
-					},
-					retries,
-					timeout,
-					`http://${configuration.ip}:${configuration.httpPort}`
-				);
-			});
+		const nodeReadyPromises = Object.keys(this.pm2ConfigMap).map(nodeName => {
+			return this.waitForNodeToBeReady(nodeName);
+		});
+
+		return Promise.all(nodeReadyPromises);
+	}
+
+	waitForNodesToBeReady(nodeNames) {
+		utils.logger.log('Waiting for nodes to load the blockchain');
+
+		const retries = 20;
+		const timeout = 3000;
+
+		const nodeReadyPromises = nodeNames.map(nodeName => {
+			const pm2Config = this.pm2ConfigMap[nodeName] || {};
+			return this.waitForNodeToBeReady(pm2Config.name);
 		});
 
 		return Promise.all(nodeReadyPromises);
@@ -253,7 +287,6 @@ class Network {
         return result !== null;
       })
     ).then(result => {
-			console.log('PEERSLIST', result); // TODO 2
 			return result;
 		});
 	}
@@ -275,6 +308,7 @@ class Network {
 		});
 	}
 
+	// TODO 222: DELETE
 	waitForNodeToSync(nodeName) {
 		return new Promise((resolve, reject) => {
 			const pm2LogProcess = childProcess.spawn('node_modules/.bin/pm2', [
@@ -309,6 +343,7 @@ class Network {
 		});
 	}
 
+	// TODO 222: DELETE
 	waitForAllNodesToSync(nodeNamesList) {
 		const waitForSyncPromises = nodeNamesList.map(nodeName => {
 			return this.waitForNodeToSync(nodeName);
@@ -359,7 +394,7 @@ class Network {
 		});
 		if (waitForSync) {
 			startPromise = startPromise.then(() => {
-				return this.waitForNodeToSync(nodeName).catch(err => {
+				return this.waitForNodeToBeReady(nodeName).catch(err => {
 					throw new Error(`Failed to start node ${nodeName} because it did not sync before timeout`);
 				});
 			});

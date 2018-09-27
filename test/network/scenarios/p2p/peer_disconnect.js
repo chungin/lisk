@@ -118,9 +118,7 @@ module.exports = function(
 					for (let i = 1; i < TOTAL_PEERS; i++) {
 						let nodeName = `node_${i}`;
 						peersPromises.push(
-							network.clearLogs(nodeName).then(() => { // TODO 2 don't clear logs, check ready via HTTP or WS
-								return network.restartNode(nodeName, true);
-							})
+							network.restartNode(nodeName, true)
 						);
 					}
 					console.info('Wait for nodes to be started');
@@ -128,7 +126,7 @@ module.exports = function(
 				});
 
 				describe('after all the nodes restart', () => {
-					// before(done => { // TODO 2
+					// before(done => { // TODO 2 not needed?
 					// 	network.enableForgingForDelegates(configurations, done);
 					// });
 
