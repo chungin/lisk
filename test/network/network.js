@@ -64,7 +64,13 @@ class Network {
 				this.configurations,
 				(err, socketsResult) => {
 					if (err) {
-						return reject(err);
+						return reject(
+							new Error(
+								`Failed to establish monitoring connections due to error: ${
+									err.message
+								}`
+							)
+						);
 					}
 					this.sockets = socketsResult;
 					resolve(socketsResult);
@@ -145,10 +151,13 @@ class Network {
 	recreateDatabases() {
 		return new Promise((resolve, reject) => {
 			utils.logger.log('Recreating databases');
-			// TODO 2: Require shell
 			shell.recreateDatabases(this.configurations, err => {
 				if (err) {
-					return reject(err);
+					return reject(
+						new Error(`Failed to recreate databases due to error ${
+							err.message
+						}`)
+					);
 				}
 				resolve();
 			});
@@ -160,7 +169,11 @@ class Network {
 			utils.logger.log('Clearing existing logs');
 			shell.clearLogs(err => {
 				if (err) {
-					return reject(err);
+					return reject(
+						new Error(`Failed to clear all logs due to error ${
+							err.message
+						}`)
+					);
 				}
 				resolve();
 			});
@@ -172,7 +185,11 @@ class Network {
 			utils.logger.log('Launching network');
 			shell.launchTestNodes(err => {
 				if (err) {
-					return reject(err);
+					return reject(
+						new Error(`Failed to launch nest nodes due to error: ${
+							err.message
+						}`)
+					);
 				}
 				resolve();
 			});
@@ -211,7 +228,11 @@ class Network {
 			waitUntilBlockchainReady(
 				(err) => {
 					if (err) {
-						return reject(err);
+						return reject(
+							new Error(`Failed to wait for node to be ready due to error ${
+								err.message
+							}`)
+						);
 					}
 					resolve();
 				},
@@ -232,7 +253,14 @@ class Network {
 			return this.waitForNodeToBeReady(nodeName);
 		});
 
-		return Promise.all(nodeReadyPromises);
+		// return Promise.all(nodeReadyPromises); // TODO 2 this is correct, next line is wrong
+		return Promise.all(nodeReadyPromises).then(() => {
+			return new Promise(resolve => {
+				setTimeout(() => {
+					resolve();
+				}, 4000);
+			});
+		});
 	}
 
 	waitForNodesToBeReady(nodeNames) {
@@ -272,6 +300,12 @@ class Network {
 				if (someFailures) {
 					throw new Error('Enabling forging failed for some of delegates');
 				}
+			})
+			.catch(err => {
+				// Rethrow error as higher level error.
+				throw new Error(`Failed to enable forging for delegates due to error: ${
+					err.message
+				}`);
 			});
 	}
 
