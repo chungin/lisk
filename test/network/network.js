@@ -221,19 +221,22 @@ class Network {
 	waitForNodeToBeReady(nodeName) {
 		const retries = 20;
 		const timeout = 3000;
-		const configuration = this.pm2ConfigMap[nodeName];
-		if (!configuration) {
+		const pm2Config = this.pm2ConfigMap[nodeName];
+		if (!pm2Config) {
 			return Promise.reject(
 				new Error(`Could not find pm2Config for ${nodeName}`)
 			);
 		}
+		const { configuration } = pm2Config;
 
 		return new Promise((resolve, reject) => {
 			waitUntilBlockchainReady(
 				(err) => {
 					if (err) {
 						return reject(
-							new Error(`Failed to wait for node to be ready due to error: ${
+							new Error(`Failed to wait for node ${
+								nodeName
+							} to be ready due to error: ${
 								err.message || err
 							}`)
 						);
