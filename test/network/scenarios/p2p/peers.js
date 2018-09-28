@@ -20,12 +20,19 @@ module.exports = function(configurations, network) {
 	describe('@network : peers', () => {
 		const params = {};
 
+		before(() => {
+			return network.waitForAllNodesToBeReady();
+		});
+
 		describe('mutual connections', () => {
 			let mutualPeers = [];
-			before(() => {
-				return network.getAllPeersLists().then((peers) => {
+			before(done => {
+				network.getAllPeersLists()
+				.then(peers => {
 					mutualPeers = peers;
-				});
+					done();
+				})
+				.catch(done);
 			});
 
 			it('should return a list of peers mutually interconnected', () => {
@@ -71,8 +78,10 @@ module.exports = function(configurations, network) {
 
 		describe('forging', () => {
 			before(done => {
-				// Expect some blocks to be forged after 30 seconds
-				const timesToCheckNetworkStatus = 30;
+				// Expect some blocks to be forged after 35 seconds
+				// This should be enough time to allow the 3rd block to propagate
+				// but not enough time for the 4th block to be forged.
+				const timesToCheckNetworkStatus = 35;
 				let timesNetworkStatusChecked = 0;
 				const checkNetworkStatusInterval = 1000;
 
@@ -80,11 +89,10 @@ module.exports = function(configurations, network) {
 					return `node_${index}`;
 				});
 
-				network.waitForNodesToBeReady(nodeNames)
+				network.waitForBlocksOnAllNodes(1)
 				.then(() => {
 					const checkingInterval = setInterval(() => {
-						// network.setMonitoringSocketsConnections(params, configurations); // TODO 2 delete
-						network.getNodesStatus()
+						network.getAllNodesStatus()
 							.then(data => {
 								const { networkMaxAvgHeight } = data;
 								timesNetworkStatusChecked += 1;
@@ -108,14 +116,14 @@ module.exports = function(configurations, network) {
 			});
 
 			describe('network status after 30 seconds', () => {
-				let getNodesStatusError;
+				let getAllNodesStatusError;
 				let networkHeight;
 				let networkAverageHeight;
 				let peersCount;
 				let peerStatusList;
 
 				before(done => {
-					network.getNodesStatus()
+					network.getAllNodesStatus()
 						.then(data => {
 							peersCount = data.peersCount;
 							peerStatusList = data.peerStatusList;
@@ -124,13 +132,13 @@ module.exports = function(configurations, network) {
 							done();
 						})
 						.catch(err => {
-							getNodesStatusError = err;
+							getAllNodesStatusError = err;
 							done();
 						});
 				});
 
 				it('should have no error', () => {
-					return expect(getNodesStatusError).not.to.exist;
+					return expect(getAllNodesStatusError).not.to.exist;
 				});
 
 				it('should have height > 1', () => {
@@ -182,7 +190,7 @@ module.exports = function(configurations, network) {
 					it('should be same for all the peers', () => {
 						const networkHeights = _.groupBy(peerStatusList, 'networkHeight');
 						const heights = Object.keys(networkHeights);
-						return expect(heights).to.have.lengthOf(1);
+						return expect(heights).to.have.lengthOf(1); // TODO 2: This fails sometimes
 					});
 				});
 			});

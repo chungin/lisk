@@ -18,8 +18,7 @@ const childProcess = require('child_process');
 const utils = require('./utils');
 const shell = require('./setup/shell');
 const config = require('./setup/config');
-const waitUntilBlockchainReady = require('../common/utils/wait_for')
-	.blockchainReady;
+const waitFor = require('../common/utils/wait_for');
 
 const NODE_FINISHED_SYNC_REGEX = /Finished sync/;
 const NODE_FINISHED_SYNC_TIMEOUT = 40000;
@@ -85,13 +84,21 @@ class Network {
 				if (err) {
 					return reject(err);
 				}
+				this.sockets = [];
 				resolve();
 			});
 		});
 	}
 
-	// TODO 2: Rename to launchNetwork or just launch
-	createNetwork() {
+	/**
+	 * Launch the network based on the current network configuration.
+	 *
+	 * @param {Object} options
+	 * @param {Boolean} options.enableForging Whether or not to enable forging on
+	 * delegates immediately after launching the network.
+	 */
+	launchNetwork(options) {
+		options = options || {};
 		return Promise.resolve()
 			.then(() => {
 				return this.generatePM2Configs()
@@ -115,12 +122,18 @@ class Network {
 				return this.waitForAllNodesToBeReady(true);
 			})
 			.then(() => {
-				return this.enableForgingForDelegates();
+				if (options.enableForging) {
+					return this.enableForgingForDelegates()
+						.then(() => {
+							return this.waitForBlocksOnAllNodes(1);
+						});
+				}
 			})
 			.then(() => {
 				return this.establishMonitoringSocketsConnections();
 			})
 			.then(() => {
+				// TODO: Check all the client socket 'connect' events instead.
 				return new Promise((resolve, reject) => {
 					utils.logger.log(
 						`Waiting ${WAIT_BEFORE_CONNECT_MS /
@@ -230,8 +243,8 @@ class Network {
 		const { configuration } = pm2Config;
 
 		return new Promise((resolve, reject) => {
-			waitUntilBlockchainReady(
-				(err) => {
+			waitFor.blockchainReady(
+				err => {
 					if (err) {
 						return reject(
 							new Error(`Failed to wait for node ${
@@ -246,43 +259,79 @@ class Network {
 				retries,
 				timeout,
 				`http://${configuration.ip}:${configuration.httpPort}`,
-				logRetries
+				!logRetries
 			);
 		});
 	}
 
-	waitForAllNodesToBeReady(logRetries) {
-		utils.logger.log('Waiting for nodes to load the blockchain');
+	waitForNodesToBeReady(nodeNames, logRetries) {
+		utils.logger.log(`Waiting for nodes ${
+			nodeNames.join(', ')
+		} to load the blockchain`);
 
-		const retries = 20;
-		const timeout = 3000;
-
-		const nodeReadyPromises = Object.keys(this.pm2ConfigMap).map(nodeName => {
+		const nodeReadyPromises = nodeNames.map(nodeName => {
 			return this.waitForNodeToBeReady(nodeName, logRetries);
 		});
 
-		// return Promise.all(nodeReadyPromises); // TODO 2 this is correct, next line is wrong
-		return Promise.all(nodeReadyPromises).then(() => {
-			return new Promise(resolve => {
-				setTimeout(() => {
+		return Promise.all(nodeReadyPromises);
+	}
+
+	waitForAllNodesToBeReady(logRetries) {
+		utils.logger.log('Waiting for all nodes to load the blockchain');
+
+		const nodeNames = Object.keys(this.pm2ConfigMap);
+
+		return this.waitForNodesToBeReady(nodeNames, logRetries);
+	}
+
+	waitForBlocksOnNode(nodeName, blocksToWait) {
+		const retries = 20;
+		const timeout = 3000;
+		const pm2Config = this.pm2ConfigMap[nodeName];
+		if (!pm2Config) {
+			return Promise.reject(
+				new Error(`Could not find pm2Config for ${nodeName}`)
+			);
+		}
+		const { configuration } = pm2Config;
+
+		return new Promise((resolve, reject) => {
+			waitFor.blocks(
+				blocksToWait,
+				err => {
+					if (err) {
+						return reject(
+							new Error(`Failed to wait for blocks on node ${
+								nodeName
+							} due to error: ${
+								err.message || err
+							}`)
+						);
+					}
 					resolve();
-				}, 4000);
-			});
+				},
+				`http://${configuration.ip}:${configuration.httpPort}`
+			);
 		});
 	}
 
-	waitForNodesToBeReady(nodeNames) {
-		utils.logger.log('Waiting for nodes to load the blockchain');
+	waitForBlocksOnNodes(nodeNames, blocksToWait) {
+		utils.logger.log(`Waiting for blocks on nodes ${
+			nodeNames.join(', ')
+		}`);
 
-		const retries = 20;
-		const timeout = 3000;
-
-		const nodeReadyPromises = nodeNames.map(nodeName => {
-			const pm2Config = this.pm2ConfigMap[nodeName] || {};
-			return this.waitForNodeToBeReady(pm2Config.name);
+		const nodeBlocksPromises = nodeNames.map(nodeName => {
+			return this.waitForBlocksOnNode(nodeName, blocksToWait);
 		});
 
-		return Promise.all(nodeReadyPromises);
+		return Promise.all(nodeBlocksPromises);
+	}
+
+	waitForBlocksOnAllNodes(blocksToWait) {
+		utils.logger.log('Waiting for blocks on all nodes');
+
+		const nodeNames = Object.keys(this.pm2ConfigMap);
+		return this.waitForBlocksOnNodes(nodeNames, blocksToWait);
 	}
 
 	enableForgingForDelegates() {
@@ -348,51 +397,6 @@ class Network {
 				return peersMap[peerString];
 			});
 		});
-	}
-
-	// TODO 222: DELETE
-	waitForNodeToSync(nodeName) {
-		return new Promise((resolve, reject) => {
-			const pm2LogProcess = childProcess.spawn('node_modules/.bin/pm2', [
-				'logs',
-				'--lines',
-				PM2_MAX_LOG_LINES,
-				nodeName,
-			]);
-
-			const nodeReadyTimeout = setTimeout(() => {
-				pm2LogProcess.stdout.removeAllListeners('data');
-				pm2LogProcess.removeAllListeners('error');
-				reject(new Error(`Node ${nodeName} failed to sync before timeout`));
-			}, NODE_FINISHED_SYNC_TIMEOUT);
-
-			pm2LogProcess.once('error', err => {
-				clearTimeout(nodeReadyTimeout);
-				pm2LogProcess.stdout.removeAllListeners('data');
-				reject(new Error(`Node ${nodeName} failed to sync: ${
-					err.message || err
-				}`));
-			});
-			pm2LogProcess.stdout.on('data', data => {
-				const dataString = data.toString();
-				// Make sure that all nodes have fully synced before we
-				// run the test cases.
-				if (NODE_FINISHED_SYNC_REGEX.test(dataString)) {
-					clearTimeout(nodeReadyTimeout);
-					pm2LogProcess.stdout.removeAllListeners('error');
-					pm2LogProcess.stdout.removeAllListeners('data');
-					resolve();
-				}
-			});
-		});
-	}
-
-	// TODO 222: DELETE
-	waitForAllNodesToSync(nodeNamesList) {
-		const waitForSyncPromises = nodeNamesList.map(nodeName => {
-			return this.waitForNodeToSync(nodeName);
-		});
-		return Promise.all(waitForSyncPromises);
 	}
 
 	clearLogs(nodeName) {
@@ -466,7 +470,7 @@ class Network {
 		return Promise.all(waitForRestartPromises);
 	}
 
-	getNodesStatus() {
+	getAllNodesStatus() {
 		return this.getAllPeers()
 			.then(peers => {
 				return getPeersStatus(peers);

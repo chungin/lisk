@@ -24,11 +24,15 @@ module.exports = function(configurations, network) {
 		let nodesBlocks;
 
 		before(() => {
-			return Promise.all(
-				configurations.map(configuration => {
-					return utils.http.getBlocks(configuration.httpPort);
-				})
-			).then(blocksResults => {
+			return network.waitForAllNodesToBeReady()
+			.then(() => {
+				return Promise.all(
+					configurations.map(configuration => {
+						return utils.http.getBlocks(configuration.httpPort);
+					})
+				);
+			})
+			.then(blocksResults => {
 				nodesBlocks = blocksResults;
 			});
 		});

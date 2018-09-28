@@ -36,6 +36,10 @@ module.exports = function(
 		const params = {};
 		const wsPorts = new Set();
 
+		before(() => {
+			return network.waitForAllNodesToBeReady();
+		});
+
 		describe('when peers are mutually connected in the network', () => {
 			before(() => {
 				return network.getAllPeersLists().then(mutualPeers => {
@@ -82,9 +86,7 @@ module.exports = function(
 					// Restart the node to load the just changed configuration
 					network
 						.restartNode('node_0', true)
-						.then(() => {
-							blockchainReady(done, null, null, 'http://127.0.0.1:4000');
-						})
+						.then(done)
 						.catch(err => {
 							done(err.message);
 						});
@@ -157,9 +159,7 @@ module.exports = function(
 					// Restart the node to load the just changed configuration
 					network
 						.restartNode('node_0', true)
-						.then(() => {
-							blockchainReady(done, null, null, 'http://127.0.0.1:4000');
-						})
+						.then(done)
 						.catch(err => {
 							done(err.message);
 						});

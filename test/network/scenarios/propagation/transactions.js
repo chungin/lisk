@@ -19,15 +19,18 @@ const Promise = require('bluebird');
 module.exports = function(configurations, network) {
 	describe('@propagation : transactions', () => {
 		const params = {};
-
 		let nodesTransactions = [];
 
 		before(() => {
-			return Promise.all(
-				network.sockets.map(socket => {
-					return socket.call('blocks');
-				})
-			).then(results => {
+			return network.waitForAllNodesToBeReady()
+			.then(() => {
+				return Promise.all(
+					network.sockets.map(socket => {
+						return socket.call('blocks');
+					})
+				);
+			})
+			.then(results => {
 				nodesTransactions = results.map(res => {
 					return res.blocks;
 				});

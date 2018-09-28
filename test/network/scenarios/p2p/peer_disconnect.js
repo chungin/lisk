@@ -34,6 +34,10 @@ module.exports = function(
 		const params = {};
 		const wsPorts = new Set();
 
+		before(() => {
+			return network.waitForAllNodesToBeReady();
+		});
+
 		describe('when peers are mutually connected in the network', () => {
 			before(() => {
 				return network.getAllPeersLists().then(mutualPeers => {
@@ -122,14 +126,16 @@ module.exports = function(
 						);
 					}
 					console.info('Wait for nodes to be started');
-					return Promise.all(peersPromises);
+					return Promise.all(peersPromises)
+						.then(() => {
+							return network.enableForgingForDelegates();
+						})
+						.then(() => {
+							return network.waitForBlocksOnAllNodes(1);
+						});
 				});
 
 				describe('after all the nodes restart', () => {
-					// before(done => { // TODO 2 not needed?
-					// 	network.enableForgingForDelegates(configurations, done);
-					// });
-
 					// The expected connection becomes EXPECTED_TOTAL_CONNECTIONS + 18 previously held connections
 					it(`there should be ${EXPECTED_TOTAL_CONNECTIONS +
 						18} established connections from 500[0-9] ports`, done => {

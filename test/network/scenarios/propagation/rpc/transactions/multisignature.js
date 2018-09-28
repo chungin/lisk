@@ -16,7 +16,6 @@
 
 const Promise = require('bluebird');
 const lisk = require('lisk-elements').default;
-const waitFor = require('../../../../../common/utils/wait_for');
 const accountFixtures = require('../../../../../fixtures/accounts');
 const randomUtil = require('../../../../../common/utils/random');
 const {
@@ -48,6 +47,10 @@ module.exports = function(configurations, network) {
 			);
 		};
 
+		before(() => {
+			return network.waitForAllNodesToBeReady();
+		});
+
 		describe('prepare accounts', () => {
 			before(() => {
 				transactions = [];
@@ -72,13 +75,12 @@ module.exports = function(configurations, network) {
 				const blocksToWait =
 					Math.ceil(numberOfTransactions / constants.maxTransactionsPerBlock) +
 					2;
-				waitFor.blocks(blocksToWait, () => {
-					confirmTransactionsOnAllNodes(transactions, configurations)
-						.then(done)
-						.catch(err => {
-							done(err);
-						});
-				});
+				network.waitForBlocksOnAllNodes(blocksToWait)
+				.then(() => {
+					return confirmTransactionsOnAllNodes(transactions, configurations);
+				})
+				.then(done)
+				.catch(done);
 			});
 		});
 
@@ -138,13 +140,12 @@ module.exports = function(configurations, network) {
 				const blocksToWait =
 					Math.ceil(numberOfTransactions / constants.maxTransactionsPerBlock) +
 					2;
-				waitFor.blocks(blocksToWait, () => {
-					confirmTransactionsOnAllNodes(transactions, configurations)
-						.then(done)
-						.catch(err => {
-							done(err);
-						});
-				});
+				network.waitForBlocksOnAllNodes(blocksToWait)
+					.then(() => {
+						return confirmTransactionsOnAllNodes(transactions, configurations);
+					})
+					.then(done)
+					.catch(done);
 			});
 		});
 	});

@@ -35,7 +35,7 @@ const configurations = setup.config.generateLiskConfigs(TOTAL_PEERS);
 let failedToLaunchNetworkError;
 
 const network = new Network(configurations);
-network.createNetwork(configurations)
+network.launchNetwork({ enableForging: true })
 	.then(() => {
 		initTestSuite();
 		run();
@@ -116,3 +116,7 @@ function initTestSuite() {
 		});
 	});
 }
+
+process.on('unhandledRejection', err => {
+	throw err;
+});
