@@ -78,12 +78,12 @@ module.exports = function(configurations, network) {
 
 		describe('forging', () => {
 			before(done => {
-				// Expect some blocks to be forged after 35 seconds
+				// Expect some blocks to be forged after 38 seconds
 				// This should be enough time to allow the 3rd block to propagate
 				// but not enough time for the 4th block to be forged.
-				const timesToCheckNetworkStatus = 35;
-				let timesNetworkStatusChecked = 0;
+				const timesToCheckNetworkStatus = 38;
 				const checkNetworkStatusInterval = 1000;
+				let timesNetworkStatusChecked = 0;
 
 				const nodeNames = configurations.map((nodeConfig, index) => {
 					return `node_${index}`;
@@ -115,7 +115,7 @@ module.exports = function(configurations, network) {
 				.catch(done);
 			});
 
-			describe('network status after 30 seconds', () => {
+			describe('network status after 38 seconds', () => {
 				let getAllNodesStatusError;
 				let networkHeight;
 				let networkAverageHeight;

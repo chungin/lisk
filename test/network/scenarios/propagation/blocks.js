@@ -24,7 +24,7 @@ module.exports = function(configurations, network) {
 		let nodesBlocks;
 
 		before(() => {
-			return network.waitForAllNodesToBeReady()
+			return network.waitForBlocksOnAllNodes(1)
 			.then(() => {
 				return Promise.all(
 					configurations.map(configuration => {
