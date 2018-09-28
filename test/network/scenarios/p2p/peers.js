@@ -26,6 +26,7 @@ module.exports = function(configurations, network) {
 
 		describe('mutual connections', () => {
 			let mutualPeers = [];
+			
 			before(done => {
 				network.getAllPeersLists()
 				.then(peers => {
@@ -77,45 +78,18 @@ module.exports = function(configurations, network) {
 		});
 
 		describe('forging', () => {
-			before(done => {
-				// Expect some blocks to be forged after 38 seconds
-				// This should be enough time to allow the 3rd block to propagate
-				// but not enough time for the 4th block to be forged.
-				const timesToCheckNetworkStatus = 38;
-				const checkNetworkStatusInterval = 1000;
-				let timesNetworkStatusChecked = 0;
-
-				const nodeNames = configurations.map((nodeConfig, index) => {
-					return `node_${index}`;
-				});
-
-				network.waitForBlocksOnAllNodes(1)
+			before(() => {
+				return network.waitForBlocksOnAllNodes(3)
 				.then(() => {
-					const checkingInterval = setInterval(() => {
-						network.getAllNodesStatus()
-							.then(data => {
-								const { networkMaxAvgHeight } = data;
-								timesNetworkStatusChecked += 1;
-								utils.logger.log(
-									`network status: height - ${
-										networkMaxAvgHeight.maxHeight
-									}, average height - ${networkMaxAvgHeight.averageHeight}`
-								);
-								if (timesNetworkStatusChecked === timesToCheckNetworkStatus) {
-									clearInterval(checkingInterval);
-									return done(null, networkMaxAvgHeight);
-								}
-							})
-							.catch(err => {
-								clearInterval(checkingInterval);
-								done(err);
-							});
-					}, checkNetworkStatusInterval);
+					return new Promise((resolve) => {
+						setTimeout(() => {
+							resolve();
+						}, 5000);
+					});
 				})
-				.catch(done);
 			});
 
-			describe('network status after 38 seconds', () => {
+			describe('network status after 3 blocks', () => {
 				let getAllNodesStatusError;
 				let networkHeight;
 				let networkAverageHeight;
@@ -127,6 +101,7 @@ module.exports = function(configurations, network) {
 						.then(data => {
 							peersCount = data.peersCount;
 							peerStatusList = data.peerStatusList;
+							console.log(11111, peerStatusList); // TODO 2
 							networkHeight = data.networkMaxAvgHeight.maxHeight;
 							networkAverageHeight = data.networkMaxAvgHeight.averageHeight;
 							done();
